@@ -6,6 +6,12 @@ namespace GildedRose;
 
 final class GildedRose
 {
+    public const QUALITY_MAX = 50;
+
+    public const QUALITY_MIN = 0;
+
+    public const QUALITY_EVOLUTION_PACE = 1;
+
     /**
      * @var Item[]
      */
@@ -16,54 +22,57 @@ final class GildedRose
         $this->items = $items;
     }
 
-    public function updateQuality(): void
+    public function getItems(): array
+    {
+        return $this->items;
+    }
+
+    public function updateQuality(Item $item): void
+    {
+        if (preg_match('#^Aged Brie#', $item->name)) {
+            $this->matureCheese($item);
+        } elseif (preg_match('#^Backstage passes#', $item->name)) {
+            $this->handlePassValue($item);
+        } elseif (preg_match('#^Conjured#', $item->name)) {
+            $item->sell_in >= 0 ? $item->quality -= self::QUALITY_EVOLUTION_PACE * 2 : $item->quality -= (self::QUALITY_EVOLUTION_PACE * 4);
+        } else {
+            $item->sell_in >= 0 ? $item->quality -= self::QUALITY_EVOLUTION_PACE : $item->quality -= (self::QUALITY_EVOLUTION_PACE * 2);
+        }
+
+        $item->quality < self::QUALITY_MIN ? $item->quality = self::QUALITY_MIN : false;
+        $item->quality > self::QUALITY_MAX ? $item->quality = self::QUALITY_MAX : false;
+    }
+
+    public function matureCheese(Item $item): void
+    {
+        $item->sell_in >= 0 ? $item->quality += self::QUALITY_EVOLUTION_PACE : $item->quality += (self::QUALITY_EVOLUTION_PACE * 2);
+    }
+
+    public function updateSellIn(Item $item): void
+    {
+        --$item->sell_in;
+    }
+
+    public function updateItems(): void
     {
         foreach ($this->items as $item) {
-            if ($item->name != 'Aged Brie' and $item->name != 'Backstage passes to a TAFKAL80ETC concert') {
-                if ($item->quality > 0) {
-                    if ($item->name != 'Sulfuras, Hand of Ragnaros') {
-                        $item->quality = $item->quality - 1;
-                    }
-                }
-            } else {
-                if ($item->quality < 50) {
-                    $item->quality = $item->quality + 1;
-                    if ($item->name == 'Backstage passes to a TAFKAL80ETC concert') {
-                        if ($item->sell_in < 11) {
-                            if ($item->quality < 50) {
-                                $item->quality = $item->quality + 1;
-                            }
-                        }
-                        if ($item->sell_in < 6) {
-                            if ($item->quality < 50) {
-                                $item->quality = $item->quality + 1;
-                            }
-                        }
-                    }
-                }
+            if (! str_contains($item->name, 'Sulfuras')) {
+                $this->updateSellIn($item);
+                $this->updateQuality($item);
             }
+        }
+    }
 
-            if ($item->name != 'Sulfuras, Hand of Ragnaros') {
-                $item->sell_in = $item->sell_in - 1;
-            }
-
-            if ($item->sell_in < 0) {
-                if ($item->name != 'Aged Brie') {
-                    if ($item->name != 'Backstage passes to a TAFKAL80ETC concert') {
-                        if ($item->quality > 0) {
-                            if ($item->name != 'Sulfuras, Hand of Ragnaros') {
-                                $item->quality = $item->quality - 1;
-                            }
-                        }
-                    } else {
-                        $item->quality = $item->quality - $item->quality;
-                    }
-                } else {
-                    if ($item->quality < 50) {
-                        $item->quality = $item->quality + 1;
-                    }
-                }
-            }
+    private function handlePassValue(Item $item): void
+    {
+        if ($item->sell_in > 10) {
+            $item->quality += self::QUALITY_EVOLUTION_PACE;
+        } elseif ($item->sell_in > 5) {
+            $item->quality += self::QUALITY_EVOLUTION_PACE * 2;
+        } elseif ($item->sell_in >= 0) {
+            $item->quality += self::QUALITY_EVOLUTION_PACE * 3;
+        } else {
+            $item->quality = 0;
         }
     }
 }
